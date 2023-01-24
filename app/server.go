@@ -23,6 +23,15 @@ func main() {
 		os.Exit(1)
 	}
 	for {
-		conn.Write([]byte("+PONG\r\n"))
+		message := make([]byte, 128)
+		n, err := conn.Read(message)
+		if err != nil {
+			fmt.Println("Error reading: ", err.Error())
+			os.Exit(1)
+		}
+		if n != 0 {
+			fmt.Println("message: ", n, message)
+			conn.Write([]byte("+PONG\r\n"))
+		}
 	}
 }
