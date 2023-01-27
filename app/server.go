@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -32,11 +33,19 @@ func handle(conn net.Conn) {
 		n, err := conn.Read(message)
 		if err != nil {
 			fmt.Println("Error reading: ", err.Error())
-			continue
+			return
 		}
 		if n != 0 {
-			fmt.Println("message: ", n, message)
-			conn.Write([]byte("+PONG\r\n"))
+			s := string(message[:])
+			req := strings.Split(s, "\r\n")
+			fmt.Println(req)
+			command := strings.ToLower(req[2])
+			switch command {
+			case "echo":
+				conn.Write([]byte("+ECHO\r\n"))
+			default:
+				conn.Write([]byte("+PONG\r\n"))
+			}
 		}
 	}
 }
