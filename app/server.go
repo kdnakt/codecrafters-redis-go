@@ -48,7 +48,8 @@ func handle(conn net.Conn) {
 			command := strings.ToLower(req[2])
 			switch command {
 			case "echo":
-				conn.Write([]byte("+ECHO\r\n"))
+				msg := req[4]
+				conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
 			default:
 				conn.Write([]byte("+PONG\r\n"))
 			}
