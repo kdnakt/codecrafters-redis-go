@@ -50,6 +50,9 @@ func handle(conn net.Conn) {
 			case "echo":
 				msg := req[4]
 				conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
+			case "set":
+				msg := "OK"
+				conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
 			default:
 				conn.Write([]byte("+PONG\r\n"))
 			}
