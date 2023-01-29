@@ -57,6 +57,14 @@ func handle(conn net.Conn, cache map[string]string) {
 				cache[key] = value
 				msg := "OK"
 				conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
+			case "get":
+				key := req[4]
+				value, ok := cache[key]
+				if ok {
+					conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(value), value)))
+				} else {
+					conn.Write([]byte("$-1\r\n"))
+				}
 			default:
 				conn.Write([]byte("+PONG\r\n"))
 			}
