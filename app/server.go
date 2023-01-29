@@ -17,6 +17,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer l.Close()
+	cache := make(map[string]string)
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -24,11 +25,11 @@ func main() {
 			continue
 		}
 		fmt.Printf("Connection from %s opened.\n", conn.RemoteAddr())
-		go handle(conn)
+		go handle(conn, cache)
 	}
 }
 
-func handle(conn net.Conn) {
+func handle(conn net.Conn, cache map[string]string) {
 	for {
 		message := make([]byte, 128)
 		n, err := conn.Read(message)
@@ -51,11 +52,15 @@ func handle(conn net.Conn) {
 				msg := req[4]
 				conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
 			case "set":
+				key := req[4]
+				value := req[6]
+				cache[key] = value
 				msg := "OK"
 				conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
 			default:
 				conn.Write([]byte("+PONG\r\n"))
 			}
+			fmt.Printf("%+v\n", cache)
 		}
 	}
 }
