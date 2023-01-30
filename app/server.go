@@ -4,8 +4,16 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
+
+type Cache struct {
+	value   string
+	expires bool
+	ttl     time.Time
+}
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -17,7 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer l.Close()
-	cache := make(map[string]string)
+	cache := make(map[string]Cache)
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -29,7 +37,7 @@ func main() {
 	}
 }
 
-func handle(conn net.Conn, cache map[string]string) {
+func handle(conn net.Conn, cache map[string]Cache) {
 	for {
 		message := make([]byte, 128)
 		n, err := conn.Read(message)
@@ -54,15 +62,39 @@ func handle(conn net.Conn, cache map[string]string) {
 			case "set":
 				key := req[4]
 				value := req[6]
-				cache[key] = value
+				if 10 < len(req) {
+					ttl, err := strconv.Atoi(req[10])
+					if err != nil {
+						fmt.Println("TTL error: ", err.Error())
+						cache[key] = Cache{
+							value:   value,
+							expires: false,
+						}
+					} else {
+						cache[key] = Cache{
+							value:   value,
+							expires: true,
+							ttl:     time.Now().Add(time.Duration(ttl * 1000000)),
+						}
+					}
+				} else {
+					cache[key] = Cache{
+						value:   value,
+						expires: false,
+					}
+				}
 				msg := "OK"
 				conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
 			case "get":
 				key := req[4]
 				value, ok := cache[key]
-				if ok {
-					conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(value), value)))
+				if ok && (!value.expires || value.ttl.After(time.Now())) {
+					msg := value.value
+					conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)))
 				} else {
+					if value.expires {
+						delete(cache, key)
+					}
 					conn.Write([]byte("$-1\r\n"))
 				}
 			default:
